@@ -30,10 +30,18 @@ function render(){
   $('timingMessage').className='timing-message'+(compressed?' warning':'');
   $('timingMessage').textContent=compressed?'◷ Short sets: some rounds play to fewer than 15 points. All matches are point-based, win by two. Estimated finish can overrun. Warm-ups are excluded.':'↳ One set per match, win by two. Point-based matches can overrun these estimates. Warm-ups and breaks are excluded.';
   $('scheduleRows').innerHTML=p.schedule.map(m=>`<tr><td>${matchLabel(m)}<br><small>${Planner.roundName(m.r,R)}</small></td><td>${m.pair.map(e=>esc(e.label)).join(' <span style="color:#9da68f">vs</span> ')}</td><td>Court ${m.court}</td><td>${clock(m.start)}</td><td>${clock(m.end)}</td><td>To ${m.points} · win by 2</td><td>~${m.duration} min</td></tr>`).join('');
-  save();
+  save();requestAnimationFrame(drawConnectors);
 }
+function drawConnectors(){
+  const root=$('bracket');root.querySelector('.connectors')?.remove();if(!root.offsetWidth)return;
+  const bounds=root.getBoundingClientRect(),rounds=[...root.querySelectorAll('.round')];
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('class','connectors');svg.setAttribute('aria-hidden','true');svg.setAttribute('width',root.scrollWidth);svg.setAttribute('height',root.scrollHeight);
+  for(let r=0;r<rounds.length-1;r++){const from=[...rounds[r].querySelectorAll('.match-card')],to=[...rounds[r+1].querySelectorAll('.match-card')];from.forEach((card,i)=>{const a=card.getBoundingClientRect(),b=to[Math.floor(i/2)].getBoundingClientRect(),x1=a.right-bounds.left,x2=b.left-bounds.left,y1=a.top+a.height/2-bounds.top,y2=b.top+b.height/2-bounds.top;const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',`M ${x1} ${y1} H ${(x1+x2)/2} V ${y2} H ${x2}`);svg.append(path);});}
+  root.prepend(svg);
+}
+window.addEventListener('resize',()=>requestAnimationFrame(drawConnectors));
 function swap(a,b){if(a===b||a<0||b<0||a>=state.slots.length||b>=state.slots.length)return;const candidate=state.slots.slice();[candidate[a],candidate[b]]=[candidate[b],candidate[a]];if(candidate.some((t,i)=>i%2===0&&!t&&!candidate[i+1])){toast('Keep at least one team in every opening match. Swap with a different position.');return;}state.slots=candidate;state.winners={};render();toast('Positions swapped. Match results cleared.');}
-function view(name){['bracket','schedule','guide'].forEach(v=>$(v+'View').hidden=v!==name);document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===name));}
+function view(name){['bracket','schedule','guide'].forEach(v=>$(v+'View').hidden=v!==name);document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='bracket')requestAnimationFrame(drawConnectors);}
 document.addEventListener('click',e=>{
   commitNames();
   const v=e.target.closest('[data-view]');if(v){render();view(v.dataset.view);}
@@ -55,6 +63,6 @@ $('setup').addEventListener('submit',e=>{e.preventDefault();$('error').textConte
   state={count,minutes,courts,size,start,slots,winners:count===state.count?state.winners:{}};render();view('bracket');toast('Bracket and court schedule are ready.');});
 $('shuffle').addEventListener('click',()=>{const teams=state.slots.filter(Boolean);for(let i=teams.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[teams[i],teams[j]]=[teams[j],teams[i]];}let n=0;state.slots=state.slots.map(t=>t?teams[n++]:null);state.winners={};render();toast('Teams shuffled. Match results cleared.');});
 $('reset').addEventListener('click',()=>{state.winners={};render();toast('Results cleared. Teams kept in place.');});
-$('print').addEventListener('click',()=>window.print());
+$('print').addEventListener('click',()=>{render();requestAnimationFrame(()=>window.print());});
 $('csv').addEventListener('click',()=>{const rows=[['Round','Match','Team 1','Team 2','Court','Estimated start','Estimated end','Point target (win by 2)','Estimated play minutes'],...currentPlan.schedule.map(m=>[Planner.roundName(m.r,currentPlan.rounds.length),matchLabel(m),m.pair[0].label,m.pair[1].label,m.court,clock(m.start),clock(m.end),m.points,m.duration])];const csv=rows.map(row=>row.map(x=>'"'+String(x).replace(/^[=+@-]/,"'$&").replace(/"/g,'""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));const a=document.createElement('a');a.href=url;a.download='sideline-court-schedule.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);});
 syncInputs();render();
