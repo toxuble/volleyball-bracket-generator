@@ -11,6 +11,7 @@ test('2–64 teams: exact byes, highest seeds, N−1 matches, increasing match s
     assert.deepEqual(byes.map(m=>m.winner.seed).sort((a,b)=>a-b),Array.from({length:byes.length},(_,i)=>i+1));
     assert.equal(plan.overhead,0);
     assert.ok(plan.scheduled<=1440);
+    assert.ok(plan.points.every(points=>points>=5&&points<=21));
     for(let r=1;r<plan.points.length;r++) {assert.ok(plan.ds[r]>plan.ds[r-1]);}
     for(const m of plan.schedule){assert.equal(m.end-m.start,m.duration);assert.ok(m.court<=courts);}
     for(let c=1;c<=courts;c++){const ms=plan.schedule.filter(m=>m.court===c);for(let i=1;i<ms.length;i++)assert.ok(ms[i].start>=ms[i-1].end);}
@@ -23,7 +24,7 @@ test('short windows scale targets down and insufficient time is rejected', () =>
     const slots=P.initialSlots(n);
     const min=P.plan(slots,1440,courts).minimum;
     if(min>15)assert.throws(()=>P.plan(slots,min-1,courts),/at least/);
-    for(const minutes of [Math.max(15,min),Math.max(15,min+30),1440]){const p=P.plan(slots,minutes,courts);assert.ok(p.scheduled<=minutes);assert.ok(p.points[0]>=5);assert.ok(p.formats.every(f=>f.bestOf%2===1&&f.points>=5));}
+    for(const minutes of [Math.max(15,min),Math.max(15,min+30),1440]){const p=P.plan(slots,minutes,courts);assert.ok(p.scheduled<=minutes);assert.ok(p.points[0]>=5);assert.ok(p.formats.every(f=>f.bestOf%2===1&&f.points>=5&&f.points<=21));}
   }
 });
 
@@ -120,4 +121,14 @@ test('best-of estimates and formats cover short and long slots', () => {
     assert.ok(format.bestOf%2===1&&format.points>=5);
     assert.ok(Math.abs(format.estimated-time)<2.5);
   }
+});
+
+
+test('verified set benchmarks and twelve-hour clock formatting', () => {
+  assert.equal(P.setEstimate(15),14);
+  assert.equal(P.setEstimate(21),18);
+  assert.equal(P.clockTime('00:00',0),'12:00 AM');
+  assert.equal(P.clockTime('12:00',0),'12:00 PM');
+  assert.equal(P.clockTime('17:00',30),'5:30 PM');
+  assert.equal(P.clockTime('23:45',30),'12:15 AM (+1 day)');
 });

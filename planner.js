@@ -19,8 +19,14 @@
     }
     return rounds;
   }
-  // USAV single-set allowances minus warm-up: 15 points ~14 min, 25 ~20 min.
-  function setEstimate(points) {return points<=15?points*14/15:14+(points-15)*0.6;}
+  // USAV scheduling allowances minus warm-up and inter-set breaks:
+  // 15-point set: 20-6=14 min; two 21-point sets: (45-6-3)/2=18 min.
+  // Custom short targets extrapolate from these planning benchmarks.
+  function setEstimate(points) {return points<=15?points*14/15:14+(points-15)*2/3;}
+  function clockTime(start, offset) {
+    const [h,m]=start.split(':').map(Number),total=h*60+m+offset,day=Math.floor(total/1440),hour=Math.floor(total/60)%24;
+    return `${hour%12||12}:${String(total%60).padStart(2,'0')} ${hour<12?'AM':'PM'}${day?` (+${day} day${day===1?'':'s'})`:''}`;
+  }
   function expectedSets(bestOf) {
     const wins=(bestOf+1)/2;let probability=1,expected=0;
     for(let lost=0;lost<wins;lost++) {
@@ -32,14 +38,12 @@
   }
   function formatFor(minutes) {
     let best;
-    for(const bestOf of [1,3,5,7,9]) {
+    const maxBestOf=Math.max(9,2*Math.ceil(minutes/setEstimate(21))+1);
+    for(let bestOf=1;bestOf<=maxBestOf;bestOf+=2) {
       const sets=expectedSets(bestOf);
-      const limit=Math.max(21,Math.ceil(15+(minutes/sets-14)/0.6)+1);
-      // Prefer conventional shorter formats, allowing extra points when they fit better.
-      const maxPoints=minutes>expectedSets(9)*setEstimate(35)?Math.min(5000,limit):35;
-      for(let points=5;points<=maxPoints;points++) {
+      for(let points=5;points<=21;points++) {
         const estimated=setEstimate(points)*sets;
-        const score=Math.abs(estimated-minutes)+({1:0,3:0.4,5:1,7:2,9:3}[bestOf])+(points>21?(points-21)*0.05:0)+(bestOf>1&&points<11?(11-points)*0.05:0);
+        const score=Math.abs(estimated-minutes)+(bestOf-1)*0.1+(bestOf>1&&points<11?(11-points)*0.05:0);
         if(!best||score<best.score)best={bestOf,points,expectedSets:sets,estimated,score};
       }
     }
@@ -93,6 +97,6 @@
     if(minutes<30&&ticks.at(-1)!==minutes)ticks.push(minutes);
     return {stages,ticks:ticks.map(minute=>({minute,round:stages.find(s=>minute>=s.start&&minute<s.end)?.r??null,finished:minute>=plan.scheduled}))};
   }
-  root.Planner={seedOrder,initialSlots,roundName,build,plan,timeline,resizeRound,setEstimate,expectedSets,formatFor};
+  root.Planner={seedOrder,initialSlots,roundName,build,plan,timeline,resizeRound,setEstimate,expectedSets,formatFor,clockTime};
   if(typeof module!=='undefined')module.exports=root.Planner;
 })(typeof window==='undefined'?globalThis:window);
