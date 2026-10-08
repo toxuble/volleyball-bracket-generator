@@ -1,6 +1,6 @@
 # Volleyball bracket generator
 
-A dark dashboard with white text and orange accents. A browser-only dashboard for a single-elimination tournament. No account, backend, dependency installation, or build step is needed to use it.
+A browser-only single-elimination tournament dashboard with a black background, white text, and orange accents. No account, backend, dependency installation, or build step is needed to use it.
 
 ## Features
 
@@ -27,7 +27,7 @@ Custom targets, especially 21 and 35, are recreational organizer rules. [FIVB in
 
 ## Run locally
 
-Open `index.html` directly in a browser, or run `npm start` (requires Python 3) and visit `http://127.0.0.1:8080`. Fonts load from Google Fonts; system fonts are used offline. Tournament data stays in local storage on the visitor’s device and is not uploaded to GitHub. Visitors do not share a live tournament state.
+Open `index.html` directly in a browser, or run `npm start` (requires Python 3) and visit `http://127.0.0.1:8080`. The dashboard uses system fonts and works offline. Tournament data stays in local storage on the visitor’s device and is not uploaded to GitHub. Visitors do not share a live tournament state.
 
 ## Tests
 
