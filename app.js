@@ -30,7 +30,15 @@ function render(){
   $('timingMessage').className='timing-message'+(compressed?' warning':'');
   $('timingMessage').textContent=compressed?'Short sets: some rounds play to fewer than 15 points. All matches are point-based, win by two. Estimated finish can overrun. Warm-ups are excluded.':'One set per match, win by two. Point-based matches can overrun these estimates. Warm-ups and breaks are excluded.';
   $('scheduleRows').innerHTML=p.schedule.map(m=>`<tr><td>${matchLabel(m)}<br><small>${Planner.roundName(m.r,R)}</small></td><td>${m.pair.map(e=>esc(e.label)).join(' <span class="versus">vs</span> ')}</td><td>Court ${m.court}</td><td>${clock(m.start)}</td><td>${clock(m.end)}</td><td>To ${m.points} · win by 2</td><td>~${m.duration} min</td></tr>`).join('');
-  save();requestAnimationFrame(drawConnectors);
+  renderTimeline(p);save();requestAnimationFrame(drawConnectors);
+}
+function elapsed(minutes){const h=Math.floor(minutes/60),m=minutes%60;return h?`${h}h${m?` ${m}m`:''}`:`${m}m`;}
+function renderTimeline(p){
+  const {stages,ticks}=Planner.timeline(p,state.minutes),R=p.rounds.length;
+  const width=Math.max(720,Math.ceil(state.minutes/30)*120);
+  $('timeline').style.minWidth=`${width}px`;
+  $('timeline').innerHTML=`<div class="timeline-track" aria-label="Estimated round durations">${stages.map(s=>`<div class="timeline-segment ${s.r===R-1?'timeline-final':''}" style="width:${(s.end-s.start)/state.minutes*100}%" title="Round ${s.r+1}: ${esc(Planner.roundName(s.r,R))}, ${elapsed(s.start)}–${elapsed(s.end)}, ${clock(s.start)}–${clock(s.end)}"><span>${s.r===R-1?'Final':`R${s.r+1}`}</span></div>`).join('')}${p.slack?`<div class="timeline-reserve" style="width:${p.slack/state.minutes*100}%" title="${p.slack} minutes reserve">Reserve</div>`:''}</div><div class="timeline-axis">${ticks.map((t,i)=>`<div class="timeline-tick ${i===0?'first':i===ticks.length-1?'last':''}" style="left:${t.minute/state.minutes*100}%"><strong>${elapsed(t.minute)}</strong><small>${clock(t.minute)}</small><span>${t.finished?(t.minute===state.minutes?'Event window ends':'Finished · reserve'):`R${t.round+1} · ${esc(Planner.roundName(t.round,R))}`}</span></div>`).join('')}</div>`;
+  $('roundSchedule').innerHTML=stages.map(s=>`<tr><td>Round ${s.r+1} · ${Planner.roundName(s.r,R)}</td><td>${clock(s.start)}</td><td>${elapsed(s.start)}</td><td>${clock(s.end)}</td><td>${elapsed(s.end)}</td></tr>`).join('');
 }
 function drawConnectors(){
   const root=$('bracket');root.querySelector('.connectors')?.remove();if(!root.offsetWidth)return;
@@ -41,7 +49,7 @@ function drawConnectors(){
 }
 window.addEventListener('resize',()=>requestAnimationFrame(drawConnectors));
 function swap(a,b){if(a===b||a<0||b<0||a>=state.slots.length||b>=state.slots.length)return;const candidate=state.slots.slice();[candidate[a],candidate[b]]=[candidate[b],candidate[a]];if(candidate.some((t,i)=>i%2===0&&!t&&!candidate[i+1])){toast('Keep at least one team in every opening match. Swap with a different position.');return;}state.slots=candidate;state.winners={};render();toast('Positions swapped. Match results cleared.');}
-function view(name){['bracket','schedule','guide'].forEach(v=>$(v+'View').hidden=v!==name);document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===name));if(name==='bracket')requestAnimationFrame(drawConnectors);}
+function view(name){['bracket','schedule','guide'].forEach(v=>$(v+'View').hidden=v!==name);document.querySelectorAll('.nav-item').forEach(b=>{b.classList.toggle('active',b.dataset.view===name);b.setAttribute('aria-pressed',String(b.dataset.view===name));});if(name==='bracket')requestAnimationFrame(drawConnectors);}
 document.addEventListener('click',e=>{
   commitNames();
   const v=e.target.closest('[data-view]');if(v){render();view(v.dataset.view);}

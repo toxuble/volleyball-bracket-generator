@@ -40,6 +40,12 @@
     active.forEach((ms,r)=>{for(let w=0;w<waves[r];w++){const start=cursor;ms.slice(w*courts,(w+1)*courts).forEach((m,c)=>schedule.push({...m,court:c+1,start,end:start+ds[r],duration:ds[r],points:points[r]}));cursor+=ds[r];}});
     return {rounds,points,ds,waves,weights,schedule,scheduled,overhead:0,slack:minutes-scheduled,minimum};
   }
-  root.Planner={seedOrder,initialSlots,roundName,build,plan};
+  function timeline(plan, minutes) {
+    const stages=plan.rounds.map((_,r)=>{const matches=plan.schedule.filter(m=>m.r===r);return {r,start:Math.min(...matches.map(m=>m.start)),end:Math.max(...matches.map(m=>m.end))};});
+    const ticks=[];for(let minute=0;minute<=minutes;minute+=30)ticks.push(minute);
+    if(minutes<30&&ticks.at(-1)!==minutes)ticks.push(minutes);
+    return {stages,ticks:ticks.map(minute=>({minute,round:stages.find(s=>minute>=s.start&&minute<s.end)?.r??null,finished:minute>=plan.scheduled}))};
+  }
+  root.Planner={seedOrder,initialSlots,roundName,build,plan,timeline};
   if(typeof module!=='undefined')module.exports=root.Planner;
 })(typeof window==='undefined'?globalThis:window);

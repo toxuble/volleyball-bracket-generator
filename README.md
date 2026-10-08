@@ -9,6 +9,8 @@ A browser-only single-elimination tournament dashboard with a black background, 
 - Editable opening-round team names, drag-to-swap positions, and keyboard-accessible up/down controls.
 - Click a team’s advance button to select or undo a match winner. Swapping/shuffling positions clears results; changing time/courts preserves results.
 - One rally-scoring set per match to a calculated point target, win by two with no cap. Later rounds have higher point targets.
+- Full-width bracket with setup inputs across the top.
+- Bottom timeline with 30-minute progress checkpoints, clock times, elapsed round starts/finishes, and reserve time.
 - Estimated court schedule, CSV export, printing, and browser-local persistence.
 
 ## Timing model

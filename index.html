@@ -7,31 +7,26 @@
   <script defer src="planner.js"></script><script defer src="app.js"></script>
 </head>
 <body>
-<aside class="sidebar" aria-label="Dashboard navigation">
-  <div class="workspace-label">VIEWS</div>
-  <nav><button class="nav-item active" data-view="bracket">Bracket</button><button class="nav-item" data-view="schedule">Court schedule</button><button class="nav-item" data-view="guide">Timing guide</button></nav>
-</aside>
+
 <main>
   <header class="topbar"><span>Single elimination</span><span class="save-status" id="saveStatus">Saved on this device</span></header>
   <div class="page-heading"><div><h1>Volleyball bracket generator</h1></div><button class="button secondary" id="print">Print / save PDF</button></div>
   <div class="workspace">
     <section class="settings panel">
-      <div class="panel-heading"><h2>Tournament setup</h2></div>
-      
       <form id="setup">
-        <label for="teamCount">Number of teams <span>02–64</span></label><input id="teamCount" type="number" min="2" max="64" value="12" required>
-        <label for="eventMinutes">Total event time <span>minutes</span></label><input id="eventMinutes" type="number" min="15" max="1440" value="240" required><div class="field-note" id="hoursNote">4 hours from start to finish</div>
-        <div class="field-grid"><div><label for="teamSize">Team size</label><select id="teamSize"><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option><option value="6" selected>6 players</option></select></div><div><label for="courtCount">Courts</label><input id="courtCount" type="number" min="1" max="16" value="2" required></div></div>
-        <label for="startTime">Event starts <span>local time</span></label><input id="startTime" type="time" value="09:00" required>
-        <div class="format">Single set per match · win by two</div>
+        <div class="setup-field"><label for="teamCount">Number of teams <span>2–64</span></label><input id="teamCount" type="number" min="2" max="64" value="12" required></div>
+        <div class="setup-field"><label for="eventMinutes">Event play time <span>minutes</span></label><input id="eventMinutes" type="number" min="15" max="1440" value="240" required><div class="field-note" id="hoursNote"></div></div>
+        <div class="setup-field"><label for="teamSize">Team size</label><select id="teamSize"><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option><option value="6" selected>6 players</option></select></div>
+        <div class="setup-field"><label for="courtCount">Courts</label><input id="courtCount" type="number" min="1" max="16" value="2" required></div>
+        <div class="setup-field"><label for="startTime">Event starts <span>local time</span></label><input id="startTime" type="time" value="09:00" required></div>
         <button type="submit" class="button primary generate">Generate bracket</button>
-        <p class="field-note centered">Changing team count resets results.<br>Timing changes keep your teams and winners.</p>
+        <div class="setup-note field-note">Single set per match · win by two. Changing team count resets results; timing changes keep your teams and winners.</div>
         <div id="error" role="alert"></div>
       </form>
-      
     </section>
     <div class="main-content">
       <div class="stats" id="stats"></div>
+      <nav class="content-tabs" aria-label="Tournament details"><button class="nav-item active" data-view="bracket" aria-pressed="true">Bracket</button><button class="nav-item" data-view="schedule" aria-pressed="false">Court schedule</button><button class="nav-item" data-view="guide" aria-pressed="false">Timing guide</button></nav>
       <section class="panel bracket-panel" id="bracketView">
         <div class="bracket-toolbar"><div><h2>Bracket</h2></div><div class="toolbar-actions"><button class="button compact" id="shuffle">Shuffle teams</button><button class="button compact" id="reset">Reset results</button></div></div>
         <div class="bracket-help"><span>Edit names in the opening round.</span><span>Drag teams to swap, or use the arrows.</span><span>Select a winner to advance.</span></div>
@@ -40,6 +35,7 @@
       </section>
       <section class="panel schedule-panel" id="scheduleView" hidden><div class="bracket-toolbar"><div><h2>Court schedule</h2></div><button class="button compact" id="csv">Export CSV</button></div><p class="schedule-note">Estimated times only: play to the round’s point target, win by two. Warm-ups are excluded. Each round finishes before the next begins; byes use no court time.</p><div class="table-scroll"><table><thead><tr><th>Match</th><th>Teams</th><th>Court</th><th>Est. start</th><th>Est. end</th><th>Target</th><th>Est. duration</th></tr></thead><tbody id="scheduleRows"></tbody></table></div></section>
       <section class="panel guide-panel" id="guideView" hidden><h2>Timing method</h2><p>Every match is one rally-scoring set to the displayed point target, win by two, with no point cap. Matches end by score; the clock never ends a match. All warm-ups, court changes, and rest breaks are excluded from the event estimate.</p><div class="guide-grid"><article><strong>~14 min</strong><h3>One set to 15</h3><p>20-minute USAV allowance minus six minutes of warm-up.</p></article><article><strong>~20 min</strong><h3>One set to 25</h3><p>26-minute USAV allowance minus six minutes of warm-up.</p></article><article><strong>Win by 2</strong><h3>No point cap</h3><p>Close matches can extend beyond the estimated finish.</p></article></div><h3>How point targets are chosen</h3><p>The planner starts with relative targets of 15 for early rounds, 21 for quarterfinals, 25 for semifinals, and 35 for the championship, where those rounds exist. It scales these targets to use the available time, then rounds to whole points. Each later round has a higher target and a longer estimated duration. Targets are capped at those reference targets rather than inflated into extremely long sets. Earlier rounds with the same reference have successively lower caps to keep every later round longer. Short windows scale targets down to a minimum of five points; longer windows leave reserve time.</p><p>Playing-time estimates interpolate between the 15-point and 25-point benchmarks and extrapolate for other targets. They round up to whole minutes. This is an organizer planning model, not a measured prediction for your teams. Custom targets such as 21 or 35 are recreational formats, not official indoor FIVB scoring.</p><h3>Courts, byes, and uncertainty</h3><p>Matches are grouped into simultaneous court waves, and every round finishes before the next starts. Byes consume no time. Team size changes the player count, not the timing estimate: player skill and rally length matter more than roster size. No guaranteed end time is possible with uncapped win-by-two scoring. Leave extra time outside the play window for warm-ups and breaks if needed.</p><p>The USA Volleyball reference also lists 65 minutes for best-of-three and 105 minutes for best-of-five, including warm-up and between-set allowances. This planner uses one-set matches so each round has a clear point target.</p><p><a href="https://usavolleyball.org/wp-content/uploads/2023/03/2025-2027-USAV-Indoor-Rules-Book_FINAL.pdf" target="_blank" rel="noopener">USA Volleyball 2025–2027 Indoor Rules · p. 132 ↗</a><br><a href="https://www.fivb.com/volleyball/the-game/basic-rules/" target="_blank" rel="noopener">FIVB scoring and match rules ↗</a></p></section>
+      <section class="timeline-panel panel" aria-labelledby="timelineHeading"><div class="summary-title"><div><h2 id="timelineHeading">Tournament timeline</h2><p>Estimated progress every 30 minutes · elapsed time from the event start · warm-ups excluded.</p></div></div><div class="timeline-scroll"><div id="timeline"></div></div><div class="table-scroll"><table class="round-schedule"><thead><tr><th>Round</th><th>Estimated start</th><th>Elapsed at start</th><th>Estimated finish</th><th>Elapsed at finish</th></tr></thead><tbody id="roundSchedule"></tbody></table></div><p class="timeline-note">Point-based matches may finish earlier or later. Reserve begins after the estimated championship finish.</p></section>
       <section class="time-summary panel"><div class="summary-title"><div><h2>Round targets and estimates</h2><p id="timeDescription"></p></div><button class="text-button" data-view="guide">Calculation details</button></div><div class="round-times" id="roundTimes"></div><div class="timing-message" id="timingMessage"></div></section>
 
     </div>

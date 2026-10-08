@@ -53,3 +53,22 @@ test('invalid scheduling inputs are rejected', () => {
   for(const courts of [0,-1,1.5,17])assert.throws(()=>P.plan(P.initialSlots(4),120,courts));
   for(const minutes of [NaN,0,14,1.5,1441])assert.throws(()=>P.plan(P.initialSlots(4),minutes,2));
 });
+
+
+test('timeline checkpoints identify the round in progress and exact round boundaries', () => {
+  const plan=P.plan(P.initialSlots(12),240,2);
+  const timeline=P.timeline(plan,240);
+  assert.deepEqual(timeline.ticks.map(t=>t.minute),[0,30,60,90,120,150,180,210,240]);
+  assert.deepEqual(timeline.stages.map(s=>[s.start,s.end]),[[0,28],[28,64],[64,84],[84,110]]);
+  assert.equal(timeline.ticks.find(t=>t.minute===30).round,1);
+  assert.equal(timeline.ticks.find(t=>t.minute===90).round,3);
+  assert.equal(timeline.ticks.find(t=>t.minute===120).finished,true);
+  const boundary={rounds:[[],[]],schedule:[{r:0,start:0,end:30},{r:1,start:30,end:60}],scheduled:60};
+  assert.equal(P.timeline(boundary,60).ticks.find(t=>t.minute===30).round,1);
+  assert.equal(P.timeline(boundary,60).ticks.at(-1).finished,true);
+});
+
+test('short and partial event windows have readable checkpoints', () => {
+  assert.deepEqual(P.timeline(P.plan(P.initialSlots(2),15,1),15).ticks.map(t=>t.minute),[0,15]);
+  assert.deepEqual(P.timeline(P.plan(P.initialSlots(2),31,1),31).ticks.map(t=>t.minute),[0,30]);
+});
