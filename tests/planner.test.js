@@ -23,7 +23,7 @@ test('short windows scale targets down and insufficient time is rejected', () =>
     const slots=P.initialSlots(n);
     const min=P.plan(slots,1440,courts).minimum;
     if(min>15)assert.throws(()=>P.plan(slots,min-1,courts),/at least/);
-    for(const minutes of [Math.max(15,min),Math.max(15,min+30),1440]){const p=P.plan(slots,minutes,courts);assert.ok(p.scheduled<=minutes);assert.ok(p.points[0]>=5);assert.ok(p.points.at(-1)<=35);}
+    for(const minutes of [Math.max(15,min),Math.max(15,min+30),1440]){const p=P.plan(slots,minutes,courts);assert.ok(p.scheduled<=minutes);assert.ok(p.points[0]>=5);assert.ok(p.points.at(-1)<=21);}
   }
 });
 
@@ -59,7 +59,7 @@ test('timeline checkpoints identify the round in progress and exact round bounda
   const plan=P.plan(P.initialSlots(12),240,2);
   const timeline=P.timeline(plan,240);
   assert.deepEqual(timeline.ticks.map(t=>t.minute),[0,30,60,90,120,150,180,210,240]);
-  assert.deepEqual(timeline.stages.map(s=>[s.start,s.end]),[[0,28],[28,64],[64,84],[84,110]]);
+  assert.deepEqual(timeline.stages.map(s=>[s.start,s.end]),[[0,28],[28,60],[60,77],[77,95]]);
   assert.equal(timeline.ticks.find(t=>t.minute===30).round,1);
   assert.equal(timeline.ticks.find(t=>t.minute===90).round,3);
   assert.equal(timeline.ticks.find(t=>t.minute===120).finished,true);
@@ -71,4 +71,18 @@ test('timeline checkpoints identify the round in progress and exact round bounda
 test('short and partial event windows have readable checkpoints', () => {
   assert.deepEqual(P.timeline(P.plan(P.initialSlots(2),15,1),15).ticks.map(t=>t.minute),[0,15]);
   assert.deepEqual(P.timeline(P.plan(P.initialSlots(2),31,1),31).ticks.map(t=>t.minute),[0,30]);
+});
+
+
+test('buffer is excluded from the play budget and point targets never exceed 21', () => {
+  for(const n of [2,12,32,64])for(const percent of [0,10,25,50]){
+    const p=P.plan(P.initialSlots(n),480,4,{},percent);
+    assert.equal(p.buffer,Math.ceil(480*percent/100));
+    assert.equal(p.playBudget,480-p.buffer);
+    assert.ok(p.points.every(x=>x<=21));
+    assert.equal(p.scheduled+p.slack+p.buffer,480);
+    assert.ok(p.schedule.every(m=>m.end<=p.playBudget));
+  }
+  assert.throws(()=>P.plan(P.initialSlots(4),15,1,{},50),/at least/);
+  assert.throws(()=>P.plan(P.initialSlots(4),120,1,{},51),/buffer/);
 });

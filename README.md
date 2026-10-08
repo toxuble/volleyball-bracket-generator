@@ -21,7 +21,7 @@ Warm-ups and breaks are **excluded**. Matches end by points, never by a timer. P
 
 The planner interpolates between the single-set benchmarks and extrapolates below/above them, rounding durations up to whole minutes. This is an organizer heuristic, not empirical data for a specific team size or level. More/fewer players affects roster totals only.
 
-Reference target caps are 15 for early rounds, 21 for quarterfinals, 25 for semifinals, and 35 for the championship. Earlier rounds sharing a reference cap are lowered successively so every later round has a higher target. A binary search scales targets down when the event is short, with at least five points in the opening round and one extra point in each later round. When there is more time than the reference targets need, the remaining time is shown as reserve, rather than creating unusually long sets. Shorter-than-15-point sets are flagged.
+Reference target caps are 15 for early rounds, 17 for quarterfinals, 19 for semifinals, and 21 for the championship. Earlier rounds sharing a reference cap are lowered successively so every later round has a higher target. A binary search scales targets down when the event is short, with at least five points in the opening round and one extra point in each later round. When there is more time than the reference targets need, the remaining time is shown as reserve, rather than creating unusually long sets. Shorter-than-15-point sets are flagged.
 
 Byes have zero duration. Active matches run in court waves, and a round barrier avoids simultaneous matches for the same team. This conservative estimate is not a fastest-possible rolling schedule. No recovery, transition, or warm-up time is added. Win-by-two play has no cap and can run over; estimated finish times are not enforceable limits.
 
@@ -50,3 +50,5 @@ See [GitHub’s Pages workflow documentation](https://docs.github.com/en/pages/g
 ## Project files
 
 `index.html` is the dashboard, `styles.css` is its responsive design, `planner.js` is the pure bracket/scheduling model, and `app.js` handles interactions and storage. Tests live in `tests/` and deployment in `.github/workflows/pages.yml`.
+
+The adjustable overrun buffer defaults to 10% of the event window. It is deducted before choosing point targets. Targets are limited to 21; additional unallocated time is shown separately from the buffer.

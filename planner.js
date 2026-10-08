@@ -19,13 +19,15 @@
     }
     return rounds;
   }
-  function plan(slots, minutes, courts, winners={}) {
+  function plan(slots, minutes, courts, winners={}, bufferPercent=0) {
     if(!Number.isInteger(minutes)||minutes<15||minutes>1440||!Number.isInteger(courts)||courts<1||courts>16) throw new Error('Use 15–1440 whole minutes and 1–16 courts.');
     if(!Array.isArray(slots)||slots.length<2||slots.length>64||!Number.isInteger(Math.log2(slots.length))||slots.filter(Boolean).length<2||slots.some((t,i)=>i%2===0&&!t&&!slots[i+1])) throw new Error('Every opening match must have at least one team in a bracket of 2–64 positions.');
+    if(!Number.isFinite(bufferPercent)||bufferPercent<0||bufferPercent>50) throw new Error('Use a buffer between 0% and 50%.');
+    const buffer=Math.ceil(minutes*bufferPercent/100),playBudget=minutes-buffer;
     const rounds=build(slots,winners),R=rounds.length;
     const active=rounds.map(ms=>ms.filter(m=>!m.bye));
     const waves=active.map(ms=>Math.ceil(ms.length/courts));
-    const weights=rounds.map((_,r)=>{const left=R-r;return left===1?35:left===2?25:left===3?21:15;});
+    const weights=rounds.map((_,r)=>{const left=R-r;return left===1?21:left===2?19:left===3?17:15;});
     const caps=weights.slice();for(let r=R-2;r>=0;r--)caps[r]=Math.min(caps[r],caps[r+1]-1);
     // USAV single-set allowances less the six-minute warm-up: 15 pts ~14 min,
     // 25 pts ~20 min. Interpolate between them, extrapolate outside them.
@@ -34,11 +36,11 @@
     function durations(points) {let prev=0;return points.map(p=>{const d=Math.max(prev+1,estimate(p));prev=d;return d;});}
     function cost(points) {return durations(points).reduce((a,d,r)=>a+d*waves[r],0);}
     const minimum=cost(targets(0));
-    if(minutes<minimum) throw new Error(`This bracket needs at least ${minimum} minutes with ${courts} court${courts===1?'':'s'}. Add time or courts.`);
-    let lo=0,hi=100; for(let i=0;i<60;i++){const mid=(lo+hi)/2;if(cost(targets(mid))<=minutes)lo=mid;else hi=mid;}
+    if(playBudget<minimum) throw new Error(`This bracket needs at least ${Math.ceil(minimum/(1-bufferPercent/100))} event minutes with ${courts} court${courts===1?'':'s'}. Add time or courts.`);
+    let lo=0,hi=100; for(let i=0;i<60;i++){const mid=(lo+hi)/2;if(cost(targets(mid))<=playBudget)lo=mid;else hi=mid;}
     const points=targets(lo),ds=durations(points),scheduled=cost(points);let cursor=0;const schedule=[];
     active.forEach((ms,r)=>{for(let w=0;w<waves[r];w++){const start=cursor;ms.slice(w*courts,(w+1)*courts).forEach((m,c)=>schedule.push({...m,court:c+1,start,end:start+ds[r],duration:ds[r],points:points[r]}));cursor+=ds[r];}});
-    return {rounds,points,ds,waves,weights,schedule,scheduled,overhead:0,slack:minutes-scheduled,minimum};
+    return {rounds,points,ds,waves,weights,schedule,scheduled,overhead:0,slack:playBudget-scheduled,buffer,bufferPercent,playBudget,minimum};
   }
   function timeline(plan, minutes) {
     const stages=plan.rounds.map((_,r)=>{const matches=plan.schedule.filter(m=>m.r===r);return {r,start:Math.min(...matches.map(m=>m.start)),end:Math.max(...matches.map(m=>m.end))};});
