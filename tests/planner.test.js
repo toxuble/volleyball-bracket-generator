@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const P = require('../planner.js');
 
-test('2–64 teams: exact byes, highest seeds, N−1 matches, increasing points, no court overlaps', () => {
+test('2–64 teams: exact byes, highest seeds, N−1 matches, increasing match slots, no court overlaps', () => {
   for (let n=2; n<=64; n++) for (const courts of [1,2,4,16]) {
     const slots=P.initialSlots(n),plan=P.plan(slots,1440,courts);
     assert.equal(plan.schedule.length,n-1);
@@ -11,7 +11,7 @@ test('2–64 teams: exact byes, highest seeds, N−1 matches, increasing points,
     assert.deepEqual(byes.map(m=>m.winner.seed).sort((a,b)=>a-b),Array.from({length:byes.length},(_,i)=>i+1));
     assert.equal(plan.overhead,0);
     assert.ok(plan.scheduled<=1440);
-    for(let r=1;r<plan.points.length;r++) {assert.ok(plan.points[r]>plan.points[r-1]);assert.ok(plan.ds[r]>plan.ds[r-1]);}
+    for(let r=1;r<plan.points.length;r++) {assert.ok(plan.ds[r]>plan.ds[r-1]);}
     for(const m of plan.schedule){assert.equal(m.end-m.start,m.duration);assert.ok(m.court<=courts);}
     for(let c=1;c<=courts;c++){const ms=plan.schedule.filter(m=>m.court===c);for(let i=1;i<ms.length;i++)assert.ok(ms[i].start>=ms[i-1].end);}
     for(let r=1;r<plan.rounds.length;r++)assert.ok(Math.min(...plan.schedule.filter(m=>m.r===r).map(m=>m.start))>=Math.max(...plan.schedule.filter(m=>m.r===r-1).map(m=>m.end)));
@@ -23,7 +23,7 @@ test('short windows scale targets down and insufficient time is rejected', () =>
     const slots=P.initialSlots(n);
     const min=P.plan(slots,1440,courts).minimum;
     if(min>15)assert.throws(()=>P.plan(slots,min-1,courts),/at least/);
-    for(const minutes of [Math.max(15,min),Math.max(15,min+30),1440]){const p=P.plan(slots,minutes,courts);assert.ok(p.scheduled<=minutes);assert.ok(p.points[0]>=5);assert.ok(p.points.at(-1)<=21);}
+    for(const minutes of [Math.max(15,min),Math.max(15,min+30),1440]){const p=P.plan(slots,minutes,courts);assert.ok(p.scheduled<=minutes);assert.ok(p.points[0]>=5);assert.ok(p.formats.every(f=>f.bestOf%2===1&&f.points>=5));}
   }
 });
 
@@ -59,10 +59,12 @@ test('timeline checkpoints identify the round in progress and exact round bounda
   const plan=P.plan(P.initialSlots(12),240,2);
   const timeline=P.timeline(plan,240);
   assert.deepEqual(timeline.ticks.map(t=>t.minute),[0,30,60,90,120,150,180,210,240]);
-  assert.deepEqual(timeline.stages.map(s=>[s.start,s.end]),[[0,28],[28,60],[60,77],[77,95]]);
-  assert.equal(timeline.ticks.find(t=>t.minute===30).round,1);
-  assert.equal(timeline.ticks.find(t=>t.minute===90).round,3);
-  assert.equal(timeline.ticks.find(t=>t.minute===120).finished,true);
+  assert.equal(timeline.stages[0].start,0);
+  for(let r=1;r<timeline.stages.length;r++)assert.equal(timeline.stages[r].start,timeline.stages[r-1].end);
+  assert.equal(timeline.ticks.find(t=>t.minute===30).round,0);
+  assert.ok(timeline.ticks.find(t=>t.minute===90).round!==null);
+  assert.equal(timeline.ticks.find(t=>t.minute===120).finished,false);
+  assert.equal(timeline.stages.at(-1).end,240);
   const boundary={rounds:[[],[]],schedule:[{r:0,start:0,end:30},{r:1,start:30,end:60}],scheduled:60};
   assert.equal(P.timeline(boundary,60).ticks.find(t=>t.minute===30).round,1);
   assert.equal(P.timeline(boundary,60).ticks.at(-1).finished,true);
@@ -74,15 +76,48 @@ test('short and partial event windows have readable checkpoints', () => {
 });
 
 
-test('buffer is excluded from the play budget and point targets never exceed 21', () => {
+test('rounds exactly fill the play budget and buffer fills the remainder', () => {
   for(const n of [2,12,32,64])for(const percent of [0,10,25,50]){
     const p=P.plan(P.initialSlots(n),480,4,{},percent);
     assert.equal(p.buffer,Math.ceil(480*percent/100));
     assert.equal(p.playBudget,480-p.buffer);
-    assert.ok(p.points.every(x=>x<=21));
+    assert.equal(p.slack,0);
+    assert.equal(p.scheduled,p.playBudget);
+    assert.equal(p.roundDurations.reduce((a,b)=>a+b,0),p.playBudget);
+    assert.equal(p.schedule.at(-1).end,p.playBudget);
     assert.equal(p.scheduled+p.slack+p.buffer,480);
     assert.ok(p.schedule.every(m=>m.end<=p.playBudget));
   }
   assert.throws(()=>P.plan(P.initialSlots(4),15,1,{},50),/at least/);
   assert.throws(()=>P.plan(P.initialSlots(4),120,1,{},51),/buffer/);
+});
+
+
+test('manual resizing reallocates time, preserves minima and fits new match formats', () => {
+  const p=P.plan(P.initialSlots(32),240,4,{},10);
+  for(let r=0;r<p.rounds.length;r++)for(const request of [-10,p.roundDurations[r],90,10000]){
+    const durations=P.resizeRound(p.roundDurations,r,request,p.minima);
+    assert.equal(durations.reduce((a,b)=>a+b,0),216);
+    assert.ok(durations.every((d,i)=>Number.isInteger(d)&&d>=p.minima[i]));
+    const changed=P.plan(P.initialSlots(32),240,4,{},10,durations);
+    assert.equal(changed.schedule.at(-1).end,216);
+    assert.deepEqual(changed.roundDurations,durations);
+  }
+  const durations=P.resizeRound(p.roundDurations,4,100,p.minima);
+  assert.notDeepEqual(P.plan(P.initialSlots(32),240,4,{},10,durations).formats,p.formats);
+  assert.throws(()=>P.plan(P.initialSlots(32),240,4,{},10,[1,2]),/Round durations/);
+  const two=P.plan(P.initialSlots(2),120,1);
+  assert.deepEqual(P.resizeRound(two.roundDurations,0,15,two.minima),[120]);
+});
+
+test('best-of estimates and formats cover short and long slots', () => {
+  assert.equal(P.expectedSets(1),1);
+  assert.equal(P.expectedSets(3),2.5);
+  assert.equal(P.expectedSets(5),4.125);
+  for(const time of [5,15,20,40,80,240,1440]){
+    const format=P.formatFor(time);
+    assert.ok(Number.isFinite(format.estimated));
+    assert.ok(format.bestOf%2===1&&format.points>=5);
+    assert.ok(Math.abs(format.estimated-time)<2.5);
+  }
 });

@@ -8,24 +8,24 @@ A browser-only single-elimination tournament dashboard with a black background, 
 - Automatic byes for the highest seeds, distributed across a power-of-two bracket.
 - Editable opening-round team names, drag-to-swap positions, and keyboard-accessible up/down controls.
 - Click a team’s advance button to select or undo a match winner. Swapping/shuffling positions clears results; changing time/courts preserves results.
-- One rally-scoring set per match to a calculated point target, win by two with no cap. Later rounds have higher point targets.
+- Point-based single-set or best-of matches fitted to allocated round slots. Later rounds have longer match slots by default.
 - Full-width bracket with setup inputs across the top.
-- Bottom timeline with 30-minute progress checkpoints, clock times, elapsed round starts/finishes, and reserve time.
+- Full-window timeline with 30-minute checkpoints, draggable boundaries, per-round duration sliders, a reset button, and the selected overrun buffer.
 - Estimated court schedule, CSV export, printing, and browser-local persistence.
 
 ## Timing model
 
-Warm-ups and breaks are **excluded**. Matches end by points, never by a timer. Point-based matches can overrun the estimated event window.
+Round slots plus the adjustable overrun buffer fill the event window exactly. The buffer defaults to 10%. No warm-ups, rest, court changes, or inter-set breaks are added.
 
-[USA Volleyball’s 2025–2027 Indoor Rules, printed page 132](https://usavolleyball.org/wp-content/uploads/2023/03/2025-2027-USAV-Indoor-Rules-Book_FINAL.pdf) recommends scheduling allowances of 20 minutes for a set to 15 and 26 minutes for a set to 25, including six minutes of warm-up. Removing that allowance gives planning benchmarks of approximately 14 and 20 minutes of play. The guide also gives 65 minutes for best-of-three and 105 for best-of-five, including warm-up and between-set allowances.
+The automatic allocation weights court waves and increases match-slot length in later rounds. Whole minutes are apportioned so there is no unallocated remainder. A round needs at least five minutes per wave; insufficient windows are rejected.
 
-The planner interpolates between the single-set benchmarks and extrapolates below/above them, rounding durations up to whole minutes. This is an organizer heuristic, not empirical data for a specific team size or level. More/fewer players affects roster totals only.
+The planner fits one-set or best-of-3/5/7/9 formats to each allocated slot, searching whole-point targets from 5 to 35. Targets up to 21 and shorter formats are preferred when they fit well; more points and sets are allowed to use longer slots. Exceptionally long slots can exceed 35 points. Best-of matches finish when a team wins a majority of sets. Every set is rally-scoring, win by two, without a hard scoring cap. The app records match winners; it does not record individual set scores.
 
-Reference target caps are 15 for early rounds, 17 for quarterfinals, 19 for semifinals, and 21 for the championship. Earlier rounds sharing a reference cap are lowered successively so every later round has a higher target. A binary search scales targets down when the event is short, with at least five points in the opening round and one extra point in each later round. When there is more time than the reference targets need, the remaining time is shown as reserve, rather than creating unusually long sets. Shorter-than-15-point sets are flagged.
+[USA Volleyball’s 2025–2027 Indoor Rules, printed page 132](https://usavolleyball.org/wp-content/uploads/2023/03/2025-2027-USAV-Indoor-Rules-Book_FINAL.pdf) gives single-set allowances of 20 minutes to 15 points and 26 minutes to 25 points including six minutes of warm-up. Removing warm-up yields 14 and 20 minutes. The planner interpolates and extrapolates those benchmarks. Multi-set estimates assume independent sets with equally matched teams: best-of-3 averages 2.5 sets and best-of-5 averages 4.125. This is an organizer estimate, not measured data for these teams. Custom formats differ from [official FIVB indoor scoring](https://www.fivb.com/volleyball/the-game/basic-rules/).
 
-Byes have zero duration. Active matches run in court waves, and a round barrier avoids simultaneous matches for the same team. This conservative estimate is not a fastest-possible rolling schedule. No recovery, transition, or warm-up time is added. Win-by-two play has no cap and can run over; estimated finish times are not enforceable limits.
+**Allocation is exact; actual playing time is uncertain.** Each court wave receives an allotted slot. The selected format has a separate estimated playing time and may end earlier or later. Team size affects roster totals only.
 
-Custom targets, especially 21 and 35, are recreational organizer rules. [FIVB indoor rules](https://www.fivb.com/volleyball/the-game/basic-rules/) use sets to 25 and a deciding set to 15 in a best-of-five match. This app deliberately uses one-set matches with progressively higher targets.
+Drag a boundary bar to transfer time between adjacent rounds. Arrow keys change one minute, Shift changes five, and Home/End move to the allowed limits. Each row also has a duration slider and number input; these redistribute time across other rounds. The event length and buffer stay fixed. Reset timeline restores the automatic allocation while preserving teams and match results. Custom allocations persist locally and reset when team count, courts, event length, or buffer changes.
 
 ## Run locally
 
@@ -33,7 +33,7 @@ Open `index.html` directly in a browser, or run `npm start` (requires Python 3) 
 
 ## Tests
 
-With Node.js 20 or newer, run `npm test`. Tests cover every team count from 2 through 64, bye seeds, match counts, court conflicts, round dependencies, target progression, short event windows, and winner propagation. There are no npm dependencies to install.
+With Node.js 20 or newer, run `npm test`. Tests cover every team count from 2 through 64, bye seeds, match counts, court conflicts, round dependencies, slot progression, exact allocation, manual resizing, match formats, short event windows, and winner propagation. There are no npm dependencies to install.
 
 ## Publish with GitHub Desktop and GitHub Pages
 
@@ -51,4 +51,3 @@ See [GitHub’s Pages workflow documentation](https://docs.github.com/en/pages/g
 
 `index.html` is the dashboard, `styles.css` is its responsive design, `planner.js` is the pure bracket/scheduling model, and `app.js` handles interactions and storage. Tests live in `tests/` and deployment in `.github/workflows/pages.yml`.
 
-The adjustable overrun buffer defaults to 10% of the event window. It is deducted before choosing point targets. Targets are limited to 21; additional unallocated time is shown separately from the buffer.
