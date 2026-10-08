@@ -43,4 +43,5 @@ main{margin:0;max-width:none;padding:0 28px 28px}.workspace{display:block}.setti
   #bracketView{height:100vh;height:100dvh;display:flex;flex-direction:column}
   #bracketView .bracket-toolbar,#bracketView .bracket-help,#bracketView .bracket-footer{flex-shrink:0}
   #bracketView .bracket-scroll{height:auto;min-height:0;flex:1}
+  #bracketView .round{width:var(--round-width,160px)}
 }

@@ -11,7 +11,7 @@ A browser-only single-elimination tournament dashboard with a dark gray backgrou
 - Editable opening-round team names, drag-to-swap positions, and keyboard-accessible up/down controls.
 - Click a team’s advance button to select or undo a match winner. Swapping/shuffling positions clears results; changing time/courts preserves results.
 - Point-based single-set or best-of matches fitted to allocated round slots, with every set target capped at 21. Later rounds have longer match slots by default.
-- A compact bracket section that fills the visible browser height. Scroll within large brackets, or continue down the page to the timeline. **Fit whole bracket** provides an overview; **Readable size** restores the normal scale.
+- A compact bracket section that fills the visible browser height, with round columns spread across its full width. Scroll within large brackets, or continue down the page to the timeline. **Fit whole bracket** shows every round vertically while keeping the full width; **Readable size** restores the normal scale. The bracket adapts when the browser is resized.
 - Full-window timeline with 30-minute checkpoints, thin draggable boundaries inside the bar and a reset button, and the selected overrun buffer.
 - Estimated court schedule, CSV export, printing, and browser-local persistence.
 

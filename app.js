@@ -66,13 +66,22 @@ $('timeline').addEventListener('keydown',e=>{
 $('resetTimeline').addEventListener('click',()=>{state.roundDurations=null;render();toast('Automatic time allocation restored. Teams and winners kept.');});
 function layoutBracket(){
   const root=$('bracket'),stage=root.parentElement,viewport=stage.parentElement;if(!viewport.offsetWidth)return;
+  root.querySelector('.connectors')?.remove();
   root.style.transform='none';root.style.width='max-content';stage.style.width='';stage.style.height='';
-  const available=viewport.clientWidth-28,R=currentPlan.rounds.length;
-  root.style.setProperty('--round-width',`${Math.max(128,Math.min(176,(available-80-R*14)/R))}px`);
-  const width=root.scrollWidth,height=root.scrollHeight;
-  const scale=fitBracket?Math.min(1,available/width,(viewport.clientHeight-24)/height):1;
-  root.style.width=`${width}px`;root.style.transform=`scale(${scale})`;
-  stage.style.width=`${width*scale}px`;stage.style.height=`${height*scale}px`;
+  const padding=getComputedStyle(viewport),R=currentPlan.rounds.length;
+  const available=Math.max(1,viewport.clientWidth-parseFloat(padding.paddingLeft)-parseFloat(padding.paddingRight));
+  const availableHeight=Math.max(1,viewport.clientHeight-parseFloat(padding.paddingTop)-parseFloat(padding.paddingBottom));
+  let scale=Math.min(1,available/(R*148+80+R*14));
+  const spreadColumns=()=>{
+    const width=available/scale;
+    root.style.width=`${width}px`;
+    root.style.setProperty('--round-width',`${(width-80-R*14)/R}px`);
+  };
+  spreadColumns();
+  if(fitBracket){scale=Math.min(scale,availableHeight/root.scrollHeight);spreadColumns();}
+  const height=root.scrollHeight;
+  root.style.transform=`scale(${scale})`;
+  stage.style.width=`${available}px`;stage.style.height=`${height*scale}px`;
   drawConnectors();
 }
 $('fitBracket').addEventListener('click',()=>{fitBracket=!fitBracket;$('fitBracket').setAttribute('aria-pressed',String(fitBracket));$('fitBracket').textContent=fitBracket?'Readable size':'Fit whole bracket';layoutBracket();});
