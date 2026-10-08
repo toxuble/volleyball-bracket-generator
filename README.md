@@ -1,6 +1,6 @@
-# Sideline — Volleyball bracket generator
+# Volleyball bracket generator
 
-A responsive, browser-only dashboard for a single-elimination tournament. No account, backend, dependency installation, or build step is needed to use it.
+A dark dashboard with white text and orange accents. A browser-only dashboard for a single-elimination tournament. No account, backend, dependency installation, or build step is needed to use it.
 
 ## Features
 
